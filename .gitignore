@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.streamlit/secrets.toml
+data/generated/*.csv.gz
+data/generated/*.json
+data/validation/*.csv.gz
+data/analytics/*.csv.gz
+data/analytics/*.json
+!data/generated/.gitkeep
+!data/validation/.gitkeep
+!data/analytics/.gitkeep

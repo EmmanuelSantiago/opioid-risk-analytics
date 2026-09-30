@@ -1,0 +1,24 @@
+{
+  "represented_customer_population": 4200000,
+  "represented_prescriptions": 7385701,
+  "detailed_opioid_transactions": 365000,
+  "detailed_customers": 109965,
+  "threshold_alerts": 6380,
+  "approved_alerts": 2553,
+  "rejected_alerts": 3827,
+  "historical_rejected_claims": 6563,
+  "historical_direct_product_loss": 358113.5,
+  "historical_foregone_profit": 115162.35,
+  "historical_unpaid_exposure": 473275.85,
+  "exposure_prevented": 284210.35,
+  "synthetic_truth_records": 20075,
+  "validation_checks": {
+    "no_year1_threshold_alerts": true,
+    "rejected_transactions_have_zero_dispensed": true,
+    "rejected_transactions_have_no_claim": true,
+    "approved_alerts_are_dispensed": true,
+    "claims_only_paid_or_rejected": true,
+    "settlement_between_30_and_90_days": true,
+    "all_financial_values_nonnegative": true
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "scored_transactions": 319917,
+  "high_risk_transactions": 6413,
+  "medium_risk_transactions": 16098,
+  "precision_top_2pct": 0.3267,
+  "recall_high_or_medium": 0.2754,
+  "coordinated_cases_detected": 40,
+  "coordinated_cases_total": 40
+}
