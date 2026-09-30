@@ -36,12 +36,21 @@ DATE_TICKS = [
 ]
 
 
-def style_figure(fig: go.Figure, title: str, height: int = 440) -> go.Figure:
-    fig.update_layout(
-        **PLOTLY_LAYOUT,
-        title={"text": title, "font": {"color": "#e6eef6", "size": 16}, "x": 0, "xanchor": "left"},
-        height=height,
-    )
+def style_figure(fig: go.Figure, title: str, height: int = 440, *, title_legend_gap: bool = False) -> go.Figure:
+    margin = dict(PLOTLY_LAYOUT["margin"])
+    legend = dict(PLOTLY_LAYOUT["legend"])
+    title_layout = {
+        "text": title,
+        "font": {"color": "#e6eef6", "size": 16},
+        "x": 0,
+        "xanchor": "left",
+    }
+    if title_legend_gap:
+        margin["t"] = 124
+        title_layout.update({"yref": "container", "y": 1, "yanchor": "top", "pad": {"t": 6, "b": 22}})
+        legend.update({"y": 1.0, "yanchor": "bottom"})
+    layout = {key: value for key, value in PLOTLY_LAYOUT.items() if key not in {"margin", "legend"}}
+    fig.update_layout(**layout, title=title_layout, height=height, margin=margin, legend=legend)
     shared = {
         "tickfont": {"color": "#93a8bb"},
         "title_font": {"color": "#c5d4e0", "size": 13},
@@ -53,8 +62,25 @@ def style_figure(fig: go.Figure, title: str, height: int = 440) -> go.Figure:
     return fig
 
 
-def show_figure(fig: go.Figure, title: str, height: int = 440) -> None:
-    st.plotly_chart(style_figure(fig, title, height), width="stretch", config={"displayModeBar": False})
+def show_figure(fig: go.Figure, title: str, height: int = 440, *, title_legend_gap: bool = False) -> None:
+    styled = style_figure(fig, title, height, title_legend_gap=title_legend_gap)
+    st.plotly_chart(styled, width="stretch", config={"displayModeBar": False})
+
+
+def configure_history_date_axis(fig: go.Figure, timestamps: pd.Series) -> None:
+    times = pd.to_datetime(timestamps)
+    if times.empty or times.dt.normalize().nunique() > 1:
+        fig.update_xaxes(title="Date", tickformatstops=DATE_TICKS)
+        return
+    day = times.iloc[-1].normalize()
+    fig.update_xaxes(
+        title="Date",
+        type="date",
+        range=[day - pd.Timedelta(hours=8), day + pd.Timedelta(days=1, hours=8)],
+        tickmode="array",
+        tickvals=[day + pd.Timedelta(hours=12)],
+        ticktext=[day.strftime("%b %d, %Y")],
+    )
 
 
 def risk_label(value: str) -> str:
@@ -154,7 +180,7 @@ def render_transaction_review(data: dict) -> None:
             customdata=history[["location_name", "normalized_units"]],
             hovertemplate="%{x|%b %d}<br>Cumulative: %{y} units<br>Location: %{customdata[0]}<br>Requested: %{customdata[1]}<extra></extra>",
         ))
-        fig.update_xaxes(title="Date", tickformatstops=DATE_TICKS)
+        configure_history_date_axis(fig, history["attempt_datetime"])
         fig.update_yaxes(title="Cumulative units")
         fig.add_hline(
             y=row["maximum_units"], line_dash="dash", line_color=RISK,
@@ -378,9 +404,22 @@ def render_product_trends(data: dict) -> None:
         exposure_prevented=("exposure_prevented", "sum"),
     )
     brand["alert_rate"] = brand["alerts"] / brand["transactions"]
-    brand = brand.sort_values(["alert_rate", "alerts"], ascending=False)
+    brand = brand.sort_values(["alert_rate", "alerts"], ascending=False).head(20)
+    brand["alerts"] = brand["alerts"].astype(int)
+    brand["high_risk"] = brand["high_risk"].astype(int)
+    brand["alert_rate"] = brand["alert_rate"].map(lambda value: f"{value:.1%}")
+    brand["exposure_prevented"] = brand["exposure_prevented"].map(money)
+    brand = brand.rename(columns={
+        "brand_name": "Brand",
+        "molecule_name": "Molecule",
+        "transactions": "Transactions",
+        "alerts": "Alerts",
+        "high_risk": "High-risk",
+        "alert_rate": "Alert rate",
+        "exposure_prevented": "Exposure prevented",
+    })
     st.subheader("Brand monitoring")
-    st.dataframe(brand.head(20), hide_index=True, width="stretch")
+    st.dataframe(brand, hide_index=True, width="stretch")
 
 
 def render_financial(data: dict) -> None:
@@ -411,7 +450,7 @@ def render_financial(data: dict) -> None:
             labels={"month": "Month", "value": "Amount", "measure": "Measure"},
         )
         fig.update_yaxes(tickprefix="$", tickformat=",")
-        show_figure(fig, "Financial transition over 24 months")
+        show_figure(fig, "Financial transition over 24 months", title_legend_gap=True)
     with right.container(border=True):
         claims = data["transactions"].dropna(subset=["settlement_days"]).copy()
         bucket_labels = ["30–39", "40–49", "50–59", "60–69", "70–79", "80–90"]
